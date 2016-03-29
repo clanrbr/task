@@ -26,5 +26,5 @@ our $dbuser       = "imot";
 our $dbpass       = "imotwww19d";
 
 our @types=('A','B');
-our %restrictions= ('A'=>100,'B'=>200);
+our %restrictions= ('A'=>100,'B'=>20);
 our $uselibs = "../task/classes";
