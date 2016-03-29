@@ -2,6 +2,7 @@ package LockActions;
 use strict;
 use Carp;
 use DBI;
+use config;
 
 my $jobCategory;
 
@@ -22,30 +23,56 @@ sub _init
 
 sub obtain_execution_lock
 {
-  my $self= shift;
-  my ($inbox,$sfields,$limit,$offset)=@_;
+  my $self = shift;
   unless (ref $self)
     {
-      croak "Should call GetMessages() with an object, not a class";
+      croak "Should call obtain_execution_lock() with an object, not a class";
     }
 
-  my ($query_limit, $query_offset)=('','');
+  my $result=0;
 
-  my ($dbh,@return);
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$imotconf::dbname;host=$imotconf::host;port=$imotconf::port", $imotconf::dbuser, $imotconf::dbpass, {AutoCommit => 0}); };
+  my ($dbh);
+  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
   if ( $dbh )
     {
-      my $sth=$dbh->prepare("SELECT FROM UPDATE");
-      if ( $sth->execute(@vls) )
+      my $sth=$dbh->prepare("UPDATE task SET number_of_jobs=number_of_jobs+1 WHERE (type_of_job=?) AND (number_of_jobs<?)");
+      if ( $sth->execute("$jobCategory","$config::restrictions{\"$jobCategory\"}") )
         {
-          while ( my @row=$sth->fetchrow_array() )
-            {
-              push(@return,\@row);
-            }
+          $result=1 if ( $sth->rows()==1 );
         }
       $sth->finish;
 
+      $dbh->commit() if ( $result==1 );
       $dbh->disconnect();
     }
-  return @return;
+  return $result;
 }
+
+sub release_execution_lock
+{
+  my $self = shift;
+  unless (ref $self)
+    {
+      croak "Should call release_execution_lock() with an object, not a class";
+    }
+
+  my $result=0;
+
+  my ($dbh);
+  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  if ( $dbh )
+    {
+      my $sth=$dbh->prepare("UPDATE task SET number_of_jobs=number_of_jobs-1 WHERE (type_of_job=?) AND (number_of_jobs>0)");
+      if ( $sth->execute("$jobCategory") )
+        {
+          $result=1 if ( $sth->rows()==1 );
+        }
+      $sth->finish;
+
+      $dbh->commit() if ( $result==1 );
+      $dbh->disconnect();
+    }
+  return $result;
+}
+
+1;
