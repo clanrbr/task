@@ -3,6 +3,7 @@ use strict;
 use Carp;
 use DBI;
 use config;
+use StatsActions;
 
 my $jobCategory;
 
@@ -38,7 +39,7 @@ sub obtain_execution_lock
       my $sth=$dbh->prepare("UPDATE task SET number_of_jobs=number_of_jobs+1 WHERE (type_of_job=?) AND (number_of_jobs<?)");
       if ( $sth->execute("$jobCategory","$config::restrictions{\"$jobCategory\"}") )
         {
-          $result=1 if ( $sth->rows()==1 );
+          $result=1 if ( $sth->rows()==1 )
         }
       $sth->finish;
 
