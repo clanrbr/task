@@ -3,7 +3,6 @@ use strict;
 use Carp;
 use DBI;
 use config;
-use StatsActions;
 
 my $jobCategory;
 
@@ -33,7 +32,7 @@ sub obtain_execution_lock
   my $result=0;
 
   my ($dbh);
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
   if ( $dbh )
     {
       my $sth=$dbh->prepare("UPDATE task SET number_of_jobs=number_of_jobs+1 WHERE (type_of_job=?) AND (number_of_jobs<?)");
@@ -60,7 +59,7 @@ sub release_execution_lock
   my $result=0;
 
   my ($dbh);
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
   if ( $dbh )
     {
       my $sth=$dbh->prepare("UPDATE task SET number_of_jobs=number_of_jobs-1 WHERE (type_of_job=?) AND (number_of_jobs>0)");

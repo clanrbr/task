@@ -4,8 +4,9 @@ use CGI;
 use config;
 use lib ("$config::uselibs");
 use LockActions;
+use StatsActions;
 
-my ($result,$lockAction);
+my ($result,$lockAction,$statsActions);
 my @resultText=("FAIL","OK");
 
 my $req = new CGI;
@@ -21,12 +22,26 @@ if ( $req )
     if ( ($vals[3+$index] eq "obtain_execution_lock") and ($vals[4+$index]=~m/A|B/) and ($method eq "GET") )
       {
         $lockAction = new LockActions('type',$vals[4+$index]);
-        $result=$resultText[$lockAction->obtain_execution_lock()];
+        my $response=$lockAction->obtain_execution_lock();
+        $result=$resultText[$response];
+
+        if ( $response==0 )
+          {
+            $statsActions = new StatsActions();
+            $statsActions->track_failed_querries($vals[4+$index]);
+          }
       }
     elsif (  ($vals[3+$index] eq "release_execution_lock") and ($vals[4+$index]=~m/A|B/) and ($method eq "GET") )
       {
         $lockAction = new LockActions('type',$vals[4+$index]);
-        $result=$resultText[$lockAction->release_execution_lock()];
+        my $response=$lockAction->release_execution_lock();
+        $result=$resultText[$response];
+
+        if ( $response==0 )
+          {
+            $statsActions = new StatsActions();
+            $statsActions->track_failed_querries($vals[4+$index]);
+          }
       }
     else
       {

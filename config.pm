@@ -20,10 +20,11 @@ $VERSION     = 1.00;
 our @EXPORT_OK;
 
 our $host         = "localhost";
-our $dbname       = "imot";
+our $dbname       = "test";
 our $port         = 15432;
-our $dbuser       = "imot";
-our $dbpass       = "imotwww19d";
+our $dbuser       = "";
+our $dbpass       = "";
+our $databaseDriver = "mysql";
 
 our @types=('A','B');
 our %restrictions= ('A'=>100,'B'=>20);

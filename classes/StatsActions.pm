@@ -30,7 +30,7 @@ sub recording
   my $result=0;
   
   my $dbh;
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
 
   if ( $dbh )
     {
@@ -57,7 +57,7 @@ sub clear_records
   my $result=0;
   
   my $dbh;
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
 
   if ( $dbh )
     {
@@ -84,7 +84,7 @@ sub get_records
   my %result;
   
   my $dbh;
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
 
   if ( $dbh )
     {
@@ -93,7 +93,7 @@ sub get_records
         {
           while ( my @row=$sth->fetchrow_array() )
             {
-              my @temp=(0,0);
+              my @temp=(0,0,0);
               $result{"$row[0]"}=\@temp if (!exists $result{"$row[0]"});
               $result{"$row[0]"}[$row[1]]++;
             }
@@ -102,6 +102,46 @@ sub get_records
       $dbh->disconnect();
     }
   return %result;
+}
+
+sub track_failed_querries
+{
+  my $self = shift;
+  unless (ref $self)
+    {
+      croak "Should call obtain_execution_lock() with an object, not a class";
+    }
+
+  my ($type_of_job)=@_;
+
+  my $result=0;
+  my $dbh;
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+
+  if ( $dbh )
+    {
+      my $flag=0;
+      my $sths=$dbh->prepare("SELECT flag FROM task_monitor LIMIT 1");
+      if ( $sths->execute() )
+        {
+          $flag=($sths->fetchrow_array())[0] if ( $sths->rows()==1 );
+        }
+      $sths->finish();
+
+      if ( $flag==1 )
+        {
+          my $sth=$dbh->prepare("INSERT INTO task_metrics (type_of_job,action) VALUES (?,2)");
+          if ( $sth->execute("$type_of_job") )
+            {
+              $result=1 if ($sth->rows()==1);
+            }
+          $sth->finish;
+        }
+
+      $dbh->commit() if ($result==1);
+      $dbh->disconnect();
+    }
+  return $result;
 }
 
 sub get_active_jobs
@@ -114,7 +154,7 @@ sub get_active_jobs
   my %result;
   
   my $dbh;
-  eval { $dbh = DBI->connect("dbi:Pg:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
+  eval { $dbh = DBI->connect("dbi:$config::databaseDriver:dbname=$config::dbname;host=$config::host;port=$config::port", $config::dbuser, $config::dbpass, {AutoCommit => 0}); };
   if ( $dbh )
     {
       my $sth=$dbh->prepare("SELECT number_of_jobs, type_of_job FROM task");
